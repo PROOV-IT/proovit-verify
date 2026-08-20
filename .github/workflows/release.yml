@@ -21,7 +21,7 @@ jobs:
         include:
           - os: ubuntu-latest
             artifact: proovit-verify-linux-x64
-            binary: proovit-verify-linux-x64
+            binary: proovit-verify-linux-x64.tar.gz
           - os: windows-latest
             artifact: proovit-verify-windows-x64
             binary: proovit-verify-windows-x64.exe
@@ -41,7 +41,12 @@ jobs:
 
       - name: Rename Linux executable
         if: runner.os == 'Linux'
-        run: mv dist/proovit-verify dist/proovit-verify-linux-x64
+        run: |
+          mv dist/proovit-verify dist/proovit-verify-linux-x64
+          chmod +x dist/proovit-verify-linux-x64
+          mkdir -p package/proovit-verify-linux-x64
+          cp dist/proovit-verify-linux-x64 package/proovit-verify-linux-x64/proovit-verify
+          tar -czf dist/proovit-verify-linux-x64.tar.gz -C package proovit-verify-linux-x64
 
       - name: Rename Windows executable
         if: runner.os == 'Windows'
@@ -84,7 +89,7 @@ jobs:
 
             ### Downloads
 
-            - `proovit-verify-linux-x64` — Linux 64-bit
+            - `proovit-verify-linux-x64.tar.gz` — Linux 64-bit (permission d’exécution incluse)
             - `proovit-verify-windows-x64.exe` — Windows 64-bit
 
             ### Usage
