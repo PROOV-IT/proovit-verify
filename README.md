@@ -28,6 +28,8 @@ Sans RPC, l’outil indique qu’une transaction est enregistrée dans l’archi
 
 Avec un RPC, il décode aussi l’événement `ProofStoredV3` et compare les valeurs publiques `proofId`, `dataHash`, `filesRoot` et `fileCount` avec l’archive. Voir [docs/BLOCKCHAIN-VERIFICATION.md](docs/BLOCKCHAIN-VERIFICATION.md) et [docs/PROOVIT-EVIDENCE-PROTOCOL.md](docs/PROOVIT-EVIDENCE-PROTOCOL.md).
 
+Les événements `FileAddedV3` sont décodés lorsqu’ils sont présents dans les reçus blockchain disponibles. Les archives doivent conserver les hash des transactions individuelles pour permettre leur récupération automatique lorsque ces ajouts ont été effectués dans des transactions séparées.
+
 ## Compilation
 
 Le projet utilise PyInstaller pour produire un exécutable autonome pour le système sur lequel la compilation est effectuée :

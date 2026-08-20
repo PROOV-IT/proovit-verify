@@ -95,6 +95,28 @@ def decode_proof_stored_v3(log: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
+def decode_file_added_v3(log: dict[str, Any]) -> dict[str, Any] | None:
+    data = normalize_hex(log.get("data"))
+    topics = log.get("topics") or []
+    if not data or len(topics) < 3:
+        return None
+    payload = data[2:]
+    if len(payload) < 4 * 64:
+        return None
+    words = [payload[index:index + 64] for index in range(0, len(payload), 64)]
+    signature = "FileAddedV3(bytes32,uint256,string,string,uint64,bytes32)"
+    if normalize_hex(keccak256(signature.encode())) != normalize_hex(topics[0]):
+        return None
+    return {
+        "proof_id_hash": normalize_hex(topics[1]),
+        "file_index": int(topics[2], 16),
+        "file_id": decode_abi_string(payload, words[0]),
+        "cid": decode_abi_string(payload, words[1]),
+        "size": int(words[2], 16),
+        "meta_hash": normalize_hex(words[3]),
+    }
+
+
 def first_value(*values: Any) -> Any:
     return next((value for value in values if value not in (None, "")), None)
 
@@ -106,10 +128,10 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
         report.add("Payload blockchain", "FAIL", "événement ProofStoredV3 introuvable ou illisible")
         return
     blockchain = first_value(get_path(root, "portable_evidence_snapshot.blockchain"), manifest.get("blockchain"), {}) or {}
-    expected_proof_id = first_value(blockchain.get("proof_id"), blockchain.get("proofId"), manifest.get("proof_id"), get_path(manifest, "proof.id"), root.get("proof_id"))
+    expected_proof_id = first_value(blockchain.get("proof_id"), blockchain.get("proofId"))
     expected_data_hash = first_value(blockchain.get("data_hash"), blockchain.get("dataHash"), get_path(manifest, "hashes.data_sha256"))
     expected_files_root = first_value(blockchain.get("files_root"), blockchain.get("filesRoot"))
-    expected_file_count = first_value(blockchain.get("file_count"), blockchain.get("fileCount"), get_path(root, "portable_evidence_snapshot.files.count"), len(manifest.get("files", [])) or None)
+    expected_file_count = first_value(blockchain.get("file_count"), blockchain.get("fileCount"))
     checks = [
         ("Proof ID blockchain", expected_proof_id, decoded["proofId"]),
         ("dataHash blockchain", expected_data_hash, decoded["dataHash"]),
@@ -122,6 +144,28 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
         else:
             equal = normalize_hex(str(expected)) == normalize_hex(str(actual)) if "Hash" in label or "Root" in label else str(expected) == str(actual)
             report.add(label, "PASS" if equal else "FAIL", str(actual))
+
+    files = get_path(root, "portable_evidence_snapshot.files.items", []) or manifest.get("files", [])
+    file_events = [decoded_file for log in logs if isinstance(log, dict) for decoded_file in [decode_file_added_v3(log)] if decoded_file]
+    if not file_events:
+        report.add("Fichiers blockchain", "INFO", "aucun événement FileAddedV3 dans cette transaction")
+        return
+    report.add("Fichiers blockchain", "PASS", f"{len(file_events)} événement(s) décodé(s)")
+    expected_by_id = {str(item.get("proof_file_id", item.get("file_id", ""))): item for item in files if item.get("proof_file_id", item.get("file_id"))}
+    for event in file_events:
+        expected = expected_by_id.get(str(event["file_id"]))
+        if not expected:
+            report.add("Fichier blockchain", "WARN", f"fileId absent de l’archive: {event['file_id']}")
+            continue
+        expected_size = first_value(expected.get("size_bytes"), expected.get("size"))
+        expected_cid = expected.get("ipfs_cid") or expected.get("cid")
+        expected_hash = first_value(expected.get("stored_sha256"), expected.get("sha256"), expected.get("plain_sha256"))
+        if expected_size is not None:
+            report.add("Taille fichier blockchain", "PASS" if int(expected_size) == event["size"] else "FAIL", str(event["size"]))
+        if expected_cid:
+            report.add("CID fichier blockchain", "PASS" if str(expected_cid) == event["cid"] else "FAIL", event["cid"])
+        if expected_hash:
+            report.add("metaHash fichier blockchain", "PASS" if normalize_hex(str(expected_hash)) == event["meta_hash"] else "FAIL", event["meta_hash"])
 
 
 class Report:
