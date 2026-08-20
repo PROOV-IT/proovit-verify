@@ -5,16 +5,18 @@ Vérificateur indépendant des archives portables ProovIT. Il ne dépend pas de 
 ## Utilisation
 
 ```bash
-proovit-verify preuve.zip --password 'CODE' --public-key 'CLE_PUBLIQUE_BASE64'
+proovit-verify preuve.zip --password 'CODE'
 ```
 
 Le code est demandé interactively s’il n’est pas fourni. Pour une sortie machine :
 
 ```bash
-proovit-verify preuve.zip --password 'CODE' --public-key 'CLE_PUBLIQUE_BASE64' --json
+proovit-verify preuve.zip --password 'CODE' --json
 ```
 
-La vérification blockchain est optionnelle et nécessite un RPC :
+Les clés publiques officielles connues sont intégrées au vérificateur et sélectionnées avec `signing_key_id`. `--public-key` reste disponible uniquement pour un override technique, une ancienne clé ou un environnement privé.
+
+La vérification blockchain utilise automatiquement l’URL publique `blockchain.rpc_url` présente dans le manifest lorsqu’elle existe. L’option manuelle reste disponible pour remplacer cette URL :
 
 ```bash
 proovit-verify preuve.zip --password 'CODE' --rpc-url 'https://...'

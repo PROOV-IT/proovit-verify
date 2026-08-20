@@ -19,6 +19,12 @@ from Cryptodome.PublicKey import ECC
 from Cryptodome.Signature import eddsa
 
 
+BUILTIN_PUBLIC_KEYS = {
+    "proovit-ed25519-staging-2026-01": "yHmzVtLg40wUkii0EuQYNdZpRbnp4giWb9nXl0sr9WI=",
+    "proovit-ed25519-prod-2026-01": "4gB8kv+H303RoTr3huskF+HTQh/0WptL+2DY3OPYQlc=",
+}
+
+
 def canonical(value: Any) -> bytes:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False).encode("utf-8")
 
@@ -70,24 +76,38 @@ def verify_manifest(manifest: dict[str, Any], report: Report, public_key: str | 
         return
     payload = json.loads(json.dumps(manifest))
     payload.setdefault("hashes", {})["manifest_canonical_sha256"] = None
+    payload.setdefault("integrity", {})["manifest_signature_valid"] = None
     payload.setdefault("embedded_metadata", {}).setdefault("fields", {})["manifest_canonical_sha256"] = None
     payload["embedded_metadata"]["fields"]["manifest_signature"] = None
     payload.pop("signature", None)
     actual = sha256_bytes(canonical(payload))
-    report.add("Manifest canonique", "PASS" if actual.lower() == str(expected).lower() else "FAIL", actual)
+    legacy_payload = json.loads(json.dumps(payload))
+    legacy_payload["integrity"]["manifest_signature_valid"] = False
+    legacy = sha256_bytes(canonical(legacy_payload))
+    matches = actual.lower() == str(expected).lower()
+    legacy_match = legacy.lower() == str(expected).lower()
+    report.add("Manifest canonique", "PASS" if matches or legacy_match else "FAIL", "legacy compatibility" if legacy_match and not matches else actual)
 
     signature = manifest.get("signature") or {}
     if not signature.get("signed"):
         report.add("Signature Ed25519", "WARN", "manifest non signé")
         return
+    key_id = str(signature.get("signing_key_id", ""))
+    public_key = public_key or BUILTIN_PUBLIC_KEYS.get(key_id)
     if not public_key:
-        report.add("Signature Ed25519", "WARN", "clé publique absente (utiliser --public-key)")
+        report.add("Signature Ed25519", "WARN", f"clé publique inconnue: {key_id} (utiliser --public-key)")
         return
     try:
         key_bytes = base64.b64decode(public_key, validate=True)
+        # ProovIT stores the raw 32-byte Ed25519 public key as base64. Wrap it
+        # in the standard SubjectPublicKeyInfo envelope for PyCryptodome.
+        if len(key_bytes) == 32:
+            key_bytes = bytes.fromhex("302a300506032b6570032100") + key_bytes
         key = ECC.import_key(key_bytes)
         verifier = eddsa.new(key, "rfc8032")
-        verifier.verify(bytes.fromhex(str(expected)), base64.b64decode(signature["signature_value"], validate=True))
+        # PHP signs the hexadecimal SHA-256 string as UTF-8 text, not the
+        # decoded 32-byte digest.
+        verifier.verify(str(expected).encode("ascii"), base64.b64decode(signature["signature_value"], validate=True))
         report.add("Signature Ed25519", "PASS", str(signature.get("signing_key_id", "")))
     except Exception as exc:  # crypto libraries expose several exception types
         report.add("Signature Ed25519", "FAIL", str(exc))
@@ -186,13 +206,16 @@ def verify_archive(path: Path, password: str | None, public_key: str | None, rpc
         }))
         report.add("Root hash", "PASS" if calculated.lower() == str(root_hash).lower() else "FAIL", calculated)
     else:
-        report.add("Root hash", "INFO", "non présent dans ce manifeste")
+        is_web_manifest = manifest.get("type") == "web-proof" or manifest.get("protocol_version") == "web-evidence-v2"
+        report.add("Root hash", "INFO", "non présent dans ce manifeste" if is_web_manifest else "non applicable à cette preuve")
 
     tx = get_path(root, "portable_evidence_snapshot.blockchain.transaction_hash") or get_path(manifest, "blockchain.transaction_hash") or get_path(manifest, "blockchain.tx_hash")
-    if tx and rpc_url:
+    manifest_rpc = get_path(root, "portable_evidence_snapshot.blockchain.rpc_url") or get_path(manifest, "blockchain.rpc_url")
+    effective_rpc = rpc_url or manifest_rpc
+    if tx and effective_rpc:
         try:
             body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_getTransactionReceipt", "params": [tx]}).encode()
-            request = urllib.request.Request(rpc_url, data=body, headers={"Content-Type": "application/json"})
+            request = urllib.request.Request(effective_rpc, data=body, headers={"Content-Type": "application/json"})
             response = json.loads(urllib.request.urlopen(request, timeout=10).read())
             receipt = response.get("result")
             report.add("Transaction blockchain", "PASS" if receipt else "FAIL", "reçu trouvé" if receipt else "reçu absent")
@@ -214,7 +237,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Vérificateur indépendant d’une archive portable ProovIT")
     parser.add_argument("archive", type=Path)
     parser.add_argument("--password", help="Code de déverrouillage de l’archive")
-    parser.add_argument("--public-key", help="Clé publique Ed25519 base64 du manifeste")
+    parser.add_argument("--public-key", help="Override technique de la clé publique Ed25519 base64")
     parser.add_argument("--rpc-url", help="RPC JSON-RPC pour vérifier le reçu blockchain")
     parser.add_argument("--json", action="store_true", dest="json_output")
     args = parser.parse_args()
