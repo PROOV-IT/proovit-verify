@@ -1,5 +1,7 @@
 # ProovIT Verify
 
+Current release: `v0.1.1`.
+
 Vérificateur indépendant des archives portables ProovIT. Il ne dépend pas de l’API ProovIT pour les contrôles offline : il lit l’archive, recalcule les hashes, vérifie la canonicalisation du manifeste, la signature Ed25519 et la timeline Web.
 
 ## Utilisation
