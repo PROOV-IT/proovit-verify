@@ -128,7 +128,7 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
         report.add("Payload blockchain", "FAIL", "événement ProofStoredV3 introuvable ou illisible")
         return
     blockchain = first_value(get_path(root, "portable_evidence_snapshot.blockchain"), manifest.get("blockchain"), {}) or {}
-    expected_proof_id = first_value(blockchain.get("proof_id"), blockchain.get("proofId"))
+    expected_proof_id = first_value(blockchain.get("proof_chain_id"), blockchain.get("proof_id"), blockchain.get("proofId"))
     expected_data_hash = first_value(blockchain.get("data_hash"), blockchain.get("dataHash"), get_path(manifest, "hashes.data_sha256"))
     expected_files_root = first_value(blockchain.get("files_root"), blockchain.get("filesRoot"))
     expected_file_count = first_value(blockchain.get("file_count"), blockchain.get("fileCount"))
@@ -148,7 +148,7 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
     files = get_path(root, "portable_evidence_snapshot.files.items", []) or manifest.get("files", [])
     file_events = [decoded_file for log in logs if isinstance(log, dict) for decoded_file in [decode_file_added_v3(log)] if decoded_file]
     if not file_events:
-        report.add("Fichiers blockchain", "INFO", "aucun événement FileAddedV3 dans cette transaction")
+        report.add("Fichiers blockchain", "INFO", "aucun événement FileAddedV3 dans la transaction globale; vérification séparée")
         return
     report.add("Fichiers blockchain", "PASS", f"{len(file_events)} événement(s) décodé(s)")
     expected_by_id = {str(item.get("proof_file_id", item.get("file_id", ""))): item for item in files if item.get("proof_file_id", item.get("file_id"))}
