@@ -127,7 +127,10 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
     if not decoded:
         report.add("Payload blockchain", "FAIL", "événement ProofStoredV3 introuvable ou illisible")
         return
-    blockchain = first_value(get_path(root, "portable_evidence_snapshot.blockchain"), manifest.get("blockchain"), {}) or {}
+    blockchain = {
+        **(get_path(root, "portable_evidence_snapshot.blockchain", {}) or {}),
+        **(manifest.get("blockchain", {}) or {}),
+    }
     expected_proof_id = first_value(blockchain.get("proof_chain_id"), blockchain.get("proof_id"), blockchain.get("proofId"))
     expected_data_hash = first_value(blockchain.get("data_hash"), blockchain.get("dataHash"), get_path(manifest, "hashes.data_sha256"))
     expected_files_root = first_value(blockchain.get("files_root"), blockchain.get("filesRoot"))
