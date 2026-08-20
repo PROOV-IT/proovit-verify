@@ -168,6 +168,59 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
             report.add("metaHash fichier blockchain", "PASS" if normalize_hex(str(expected_hash)) == event["meta_hash"] else "FAIL", event["meta_hash"])
 
 
+def fetch_receipt(rpc_url: str, tx_hash: str) -> dict[str, Any] | None:
+    body = json.dumps({"jsonrpc": "2.0", "id": 1, "method": "eth_getTransactionReceipt", "params": [tx_hash]}).encode()
+    request = urllib.request.Request(rpc_url, data=body, headers={"Content-Type": "application/json"})
+    response = json.loads(urllib.request.urlopen(request, timeout=10).read())
+    return response.get("result")
+
+
+def verify_file_transactions(root: dict[str, Any], manifest: dict[str, Any], rpc_url: str, report: Report) -> None:
+    blockchain = manifest.get("blockchain") or get_path(root, "portable_evidence_snapshot.blockchain", {}) or {}
+    transactions = blockchain.get("file_transactions") or []
+    if not transactions:
+        report.add("Transactions fichiers", "INFO", "aucune transaction individuelle dans le manifeste")
+        return
+    files = get_path(root, "portable_evidence_snapshot.files.items", []) or []
+    files_by_id = {str(item.get("proof_file_id", "")): item for item in files}
+    root_transactions = {
+        str(item.get("transaction_hash")): item
+        for item in (get_path(root, "portable_evidence_snapshot.blockchain.file_transactions", []) or [])
+    }
+    decoded_count = 0
+    for transaction in transactions:
+        tx_hash = transaction.get("transaction_hash")
+        if not tx_hash:
+            report.add("Transaction fichier", "FAIL", "hash de transaction absent")
+            continue
+        try:
+            receipt = fetch_receipt(rpc_url, str(tx_hash))
+            event = next((decoded for log in (receipt or {}).get("logs", []) if (decoded := decode_file_added_v3(log))), None)
+            if not event:
+                report.add("Transaction fichier", "FAIL", f"FileAddedV3 absent: {tx_hash}")
+                continue
+            decoded_count += 1
+            file_id = str(transaction.get("file_id", ""))
+            expected = files_by_id.get(file_id, {})
+            checks = [
+                ("fileId fichier", file_id, event["file_id"]),
+                ("Taille fichier", transaction.get("size") or root_transactions.get(str(tx_hash), {}).get("size"), event["size"]),
+                ("metaHash fichier", transaction.get("meta_hash", expected.get("stored_sha256", expected.get("sha256"))), event["meta_hash"]),
+            ]
+            for label, expected_value, actual in checks:
+                if expected_value in (None, ""):
+                    report.add(label, "INFO", "valeur attendue absente")
+                else:
+                    equal = normalize_hex(str(expected_value)) == normalize_hex(str(actual)) if "Hash" in label else str(expected_value) == str(actual)
+                    if label == "Taille fichier" and not equal:
+                        report.add(label, "WARN", f"{actual} octets on-chain; taille archive en clair différente")
+                    else:
+                        report.add(label, "PASS" if equal else "FAIL", str(actual))
+        except (urllib.error.URLError, ValueError, KeyError) as exc:
+            report.add("Transaction fichier", "FAIL", f"{tx_hash}: {exc}")
+    report.add("Fichiers blockchain vérifiés", "PASS" if decoded_count == len(transactions) else "FAIL", f"{decoded_count}/{len(transactions)}")
+
+
 class Report:
     def __init__(self) -> None:
         self.rows: list[tuple[str, str, str]] = []
@@ -347,6 +400,7 @@ def verify_archive(path: Path, password: str | None, public_key: str | None, rpc
             report.add("Transaction blockchain", "PASS" if receipt else "FAIL", "reçu trouvé" if receipt else "reçu absent")
             if receipt:
                 verify_blockchain_payload(root, manifest, receipt, report)
+                verify_file_transactions(root, manifest, effective_rpc, report)
         except (urllib.error.URLError, ValueError) as exc:
             report.add("Transaction blockchain", "WARN", str(exc))
     elif tx:
