@@ -1,6 +1,6 @@
 # ProovIT Verify
 
-Current release: `v0.1.1`.
+Current release: `v0.1.3`.
 
 Vérificateur indépendant des archives portables ProovIT. Il ne dépend pas de l’API ProovIT pour les contrôles offline : il lit l’archive, recalcule les hashes, vérifie la canonicalisation du manifeste, la signature Ed25519 et la timeline Web.
 
@@ -25,6 +25,8 @@ proovit-verify preuve.zip --password 'CODE' --rpc-url 'https://...'
 ```
 
 Sans RPC, l’outil indique qu’une transaction est enregistrée dans l’archive mais ne prétend pas avoir vérifié le réseau.
+
+Avec un RPC, il décode aussi l’événement `ProofStoredV3` et compare les valeurs publiques `proofId`, `dataHash`, `filesRoot` et `fileCount` avec l’archive. Voir [docs/BLOCKCHAIN-VERIFICATION.md](docs/BLOCKCHAIN-VERIFICATION.md) et [docs/PROOVIT-EVIDENCE-PROTOCOL.md](docs/PROOVIT-EVIDENCE-PROTOCOL.md).
 
 ## Compilation
 

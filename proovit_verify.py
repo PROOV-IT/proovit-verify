@@ -17,6 +17,7 @@ from typing import Any
 import pyzipper
 from Cryptodome.PublicKey import ECC
 from Cryptodome.Signature import eddsa
+from Cryptodome.Hash import keccak
 
 
 BUILTIN_PUBLIC_KEYS = {
@@ -40,6 +41,87 @@ def get_path(value: dict[str, Any], path: str, default: Any = None) -> Any:
             return default
         current = current[part]
     return current
+
+
+def normalize_hex(value: Any) -> str | None:
+    if not isinstance(value, str):
+        return None
+    value = value.lower().strip()
+    return value if value.startswith("0x") else f"0x{value}"
+
+
+def keccak256(data: bytes) -> str:
+    digest = keccak.new(digest_bits=256)
+    digest.update(data)
+    return "0x" + digest.hexdigest()
+
+
+def decode_abi_string(data_hex: str, offset_word: str) -> str | None:
+    try:
+        offset = int(offset_word, 16) * 2
+        length = int(data_hex[offset:offset + 64], 16) * 2
+        raw = bytes.fromhex(data_hex[offset + 64:offset + 64 + length])
+        return raw.decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return None
+
+
+def decode_proof_stored_v3(log: dict[str, Any]) -> dict[str, Any] | None:
+    data = normalize_hex(log.get("data"))
+    topics = log.get("topics") or []
+    if not data or len(topics) < 3:
+        return None
+    payload = data[2:]
+    if len(payload) < 10 * 64:
+        return None
+    words = [payload[index:index + 64] for index in range(0, len(payload), 64)]
+    signature = "ProofStoredV3(bytes32,address,uint64,uint64,uint32,bytes32,bytes32,string,string,string,int64,int64)"
+    if normalize_hex(keccak256(signature.encode())) != normalize_hex(topics[0]):
+        return None
+    def uint(index: int) -> int:
+        return int(words[index], 16)
+    def signed(index: int) -> int:
+        value = int(words[index], 16)
+        return value - (1 << 256) if value >= (1 << 255) else value
+    return {
+        "id": normalize_hex(topics[1]),
+        "submitter": "0x" + topics[2][-40:],
+        "date": uint(0), "price": uint(1), "fileCount": uint(2),
+        "dataHash": normalize_hex(words[3]), "filesRoot": normalize_hex(words[4]),
+        "proofId": decode_abi_string(payload, words[5]),
+        "proofName": decode_abi_string(payload, words[6]),
+        "signer": decode_abi_string(payload, words[7]),
+        "latE6": signed(8), "lngE6": signed(9),
+    }
+
+
+def first_value(*values: Any) -> Any:
+    return next((value for value in values if value not in (None, "")), None)
+
+
+def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], receipt: dict[str, Any], report: Report) -> None:
+    logs = receipt.get("logs") or []
+    decoded = next((decode_proof_stored_v3(log) for log in logs if isinstance(log, dict)), None)
+    if not decoded:
+        report.add("Payload blockchain", "FAIL", "événement ProofStoredV3 introuvable ou illisible")
+        return
+    blockchain = first_value(get_path(root, "portable_evidence_snapshot.blockchain"), manifest.get("blockchain"), {}) or {}
+    expected_proof_id = first_value(blockchain.get("proof_id"), blockchain.get("proofId"), manifest.get("proof_id"), get_path(manifest, "proof.id"), root.get("proof_id"))
+    expected_data_hash = first_value(blockchain.get("data_hash"), blockchain.get("dataHash"), get_path(manifest, "hashes.data_sha256"))
+    expected_files_root = first_value(blockchain.get("files_root"), blockchain.get("filesRoot"))
+    expected_file_count = first_value(blockchain.get("file_count"), blockchain.get("fileCount"), get_path(root, "portable_evidence_snapshot.files.count"), len(manifest.get("files", [])) or None)
+    checks = [
+        ("Proof ID blockchain", expected_proof_id, decoded["proofId"]),
+        ("dataHash blockchain", expected_data_hash, decoded["dataHash"]),
+        ("filesRoot blockchain", expected_files_root, decoded["filesRoot"]),
+        ("fileCount blockchain", expected_file_count, decoded["fileCount"]),
+    ]
+    for label, expected, actual in checks:
+        if expected is None:
+            report.add(label, "INFO", "valeur attendue absente du manifeste")
+        else:
+            equal = normalize_hex(str(expected)) == normalize_hex(str(actual)) if "Hash" in label or "Root" in label else str(expected) == str(actual)
+            report.add(label, "PASS" if equal else "FAIL", str(actual))
 
 
 class Report:
@@ -219,6 +301,8 @@ def verify_archive(path: Path, password: str | None, public_key: str | None, rpc
             response = json.loads(urllib.request.urlopen(request, timeout=10).read())
             receipt = response.get("result")
             report.add("Transaction blockchain", "PASS" if receipt else "FAIL", "reçu trouvé" if receipt else "reçu absent")
+            if receipt:
+                verify_blockchain_payload(root, manifest, receipt, report)
         except (urllib.error.URLError, ValueError) as exc:
             report.add("Transaction blockchain", "WARN", str(exc))
     elif tx:

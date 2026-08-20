@@ -34,6 +34,14 @@ jobs:
             artifact: proovit-verify-windows-arm64
             binary: proovit-verify-windows-arm64.exe
             architecture: arm64
+          - os: macos-13
+            artifact: proovit-verify-macos-x64
+            binary: proovit-verify-macos-x64.tar.gz
+            architecture: x64
+          - os: macos-14
+            artifact: proovit-verify-macos-arm64
+            binary: proovit-verify-macos-arm64.tar.gz
+            architecture: arm64
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -57,6 +65,14 @@ jobs:
           mkdir -p package/proovit-verify-linux-x64
           cp dist/proovit-verify-linux-x64 package/proovit-verify-linux-x64/proovit-verify
           tar -czf dist/proovit-verify-linux-x64.tar.gz -C package proovit-verify-linux-x64
+
+      - name: Package macOS executable
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          chmod +x dist/proovit-verify
+          mv dist/proovit-verify dist/proovit-verify-macos-${{ matrix.architecture }}
+          tar -czf dist/proovit-verify-macos-${{ matrix.architecture }}.tar.gz -C dist proovit-verify-macos-${{ matrix.architecture }}
 
       - name: Rename Windows executable
         if: runner.os == 'Windows'
@@ -105,6 +121,8 @@ jobs:
             - `proovit-verify-windows-x64.exe` — Windows 64-bit Intel/AMD
             - `proovit-verify-windows-x86.exe` — Windows 32-bit Intel/AMD
             - `proovit-verify-windows-arm64.exe` — Windows ARM64
+            - `proovit-verify-macos-x64.tar.gz` — macOS Intel
+            - `proovit-verify-macos-arm64.tar.gz` — macOS Apple Silicon
 
             ### Linux usage
 
