@@ -16,7 +16,7 @@ Le code est demandé interactively s’il n’est pas fourni. Pour une sortie ma
 proovit-verify preuve.zip --password 'CODE' --json
 ```
 
-Les clés publiques officielles connues sont intégrées au vérificateur et sélectionnées avec `signing_key_id`. `--public-key` reste disponible uniquement pour un override technique, une ancienne clé ou un environnement privé.
+Les clés publiques officielles connues sont intégrées au vérificateur et sélectionnées avec `signing_key_id`. `--public-key` reste disponible pour un contrôle technique explicite, une clé historique ou un environnement privé.
 
 La vérification blockchain utilise automatiquement l’URL publique `blockchain.rpc_url` présente dans le manifest lorsqu’elle existe. L’option manuelle reste disponible pour remplacer cette URL :
 
@@ -25,6 +25,10 @@ proovit-verify preuve.zip --password 'CODE' --rpc-url 'https://...'
 ```
 
 Sans RPC, l’outil indique qu’une transaction est enregistrée dans l’archive mais ne prétend pas avoir vérifié le réseau.
+
+## Documentation
+
+Le [parcours documentaire](docs/README.md) oriente les utilisateurs, les professionnels du droit, les experts et les développeurs. Les [spécifications](docs/specs/PROOVIT-EVIDENCE-PROTOCOL.md), [vecteurs de test](docs/test-vectors/) et [schémas](schemas/) permettent une réimplémentation indépendante.
 
 Avec un RPC, il décode aussi l’événement `ProofStoredV3` et compare les valeurs publiques `proofId`, `dataHash`, `filesRoot` et `fileCount` avec l’archive. Voir [docs/BLOCKCHAIN-VERIFICATION.md](docs/BLOCKCHAIN-VERIFICATION.md) et [docs/PROOVIT-EVIDENCE-PROTOCOL.md](docs/PROOVIT-EVIDENCE-PROTOCOL.md).
 

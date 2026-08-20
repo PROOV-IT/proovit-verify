@@ -12,11 +12,11 @@ Fields in a Web archive should be interpreted as `DECLARED_BY_USER`, `OBSERVED_B
 
 The archive may contain requested and final URLs, browser/runtime information, network context, resource references and screenshots. The verifier does not independently replay the source Web page or prove that a remote page was truthful at the time of capture.
 
-Une preuve Web peut contenir une chronologie d’événements : ouverture de session, navigation, capture, gel d’état et finalisation. Chaque événement contient un numéro de séquence, un type, un contenu normalisé et le hash de l’événement précédent.
+A Web evidence archive may contain an event timeline: session opening, navigation, capture, state freeze and finalization. Each event contains a sequence number, a type, normalized content and the hash of the preceding event.
 
-Le vérificateur contrôle que les séquences sont continues, que le premier événement référence l’absence de précédent, que chaque hash correspond au contenu canonique et que le dernier hash correspond à la valeur annoncée.
+The verifier checks sequence continuity, verifies that the first event has no predecessor, recomputes each canonical event hash and compares the final hash with the announced value.
 
-Une archive qui ne contient pas de timeline Web n’est pas une preuve Web incomplète par défaut : elle peut correspondre à une capture multimédia ou à un autre type de preuve. Le résultat indique alors que le contrôle Web n’est pas applicable.
+An archive without a Web timeline is not classified as corrupt by that fact alone: it may represent multimedia evidence or another evidence family. The result reports that the Web control is not applicable.
 
 ## 4. Exact timeline hash input
 
