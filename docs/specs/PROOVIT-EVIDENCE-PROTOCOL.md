@@ -53,9 +53,9 @@ The ZIP is readable with its access code. The access code is not a signature and
 
 The verifier checks only data available in the archive and, for online checks, public RPC responses. It does not call a private ProovIT API.
 
-## 12. Limitations
+## 12. Protocol scope and compatibility
 
-Older archives may omit global blockchain fields or individual file transaction hashes. A blockchain confirmation does not prove authorship, truth of the captured content, or legal admissibility.
+Older archives may use an earlier manifest shape or omit individual file transaction hashes. Such fields are reported according to the compatibility rules in `VERSIONING-AND-COMPATIBILITY.md`. A blockchain confirmation is an external technical attestation; it does not by itself establish authorship, the truth of captured content or legal admissibility.
 
 ## 13. Versioning and compatibility
 
@@ -72,15 +72,5 @@ Consumers should treat ZIP contents, JSON, HTML and RPC responses as untrusted i
 - [Web Evidence V2](WEB-EVIDENCE-V2.md)
 - [Multimedia Evidence V1](MULTIMEDIA-EVIDENCE-V1.md)
 - [Blockchain Verification](BLOCKCHAIN-VERIFICATION.md)
-- [Security and Trust Model](SECURITY-AND-TRUST-MODEL.md)
+- [Security and Trust Model](../expert/MODELE-DE-CONFIANCE.md)
 - [Versioning and Compatibility](VERSIONING-AND-COMPATIBILITY.md)
-
-Le protocole décrit la relation vérifiable entre une archive ProovIT, ses fichiers, ses manifestes, sa signature et son ancrage blockchain.
-
-1. `archive_manifest_v1` inventorie les entrées de l’archive et leurs SHA-256.
-2. Le manifeste de certification est canonique et signé avec Ed25519.
-3. Les preuves Web peuvent ajouter une timeline chaînée par hash et un `evidence_root_hash`.
-4. L’ancrage `storeProofV3` publie notamment `proofId`, `dataHash`, `filesRoot` et `fileCount` dans l’événement `ProofStoredV3`.
-5. `proovit-verify` recalcule les contrôles locaux puis interroge directement le RPC indiqué par l’archive ou fourni par l’utilisateur.
-
-Le logiciel ne déduit pas la recevabilité juridique : il établit des faits techniques reproductibles à partir de l’archive et de données publiques.

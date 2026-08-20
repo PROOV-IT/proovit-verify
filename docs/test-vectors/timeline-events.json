@@ -1,0 +1,19 @@
+[
+  {
+    "event_id": "evt-1",
+    "session_id": "sess-1",
+    "acquisition_id": null,
+    "sequence": 1,
+    "event_type": "capture",
+    "actor_type": "runner",
+    "user_id": null,
+    "server_received_at": "2026-01-01T00:00:00Z",
+    "runner_occurred_at": null,
+    "monotonic_time": null,
+    "normalized_payload": {
+      "ok": true
+    },
+    "result": "accepted",
+    "previous_event_hash": null
+  }
+]
