@@ -92,9 +92,16 @@ jobs:
             - `proovit-verify-linux-x64.tar.gz` — Linux 64-bit (permission d’exécution incluse)
             - `proovit-verify-windows-x64.exe` — Windows 64-bit
 
-            ### Usage
+            ### Linux usage
 
             ```bash
+            tar -xzf proovit-verify-linux-x64.tar.gz
+            ./proovit-verify-linux-x64/proovit-verify preuve.zip --password "CODE"
+            ```
+
+            ### Windows usage
+
+            ```powershell
             proovit-verify preuve.zip --password "CODE"
             ```
 
