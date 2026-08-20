@@ -34,7 +34,7 @@ jobs:
             artifact: proovit-verify-windows-arm64
             binary: proovit-verify-windows-arm64.exe
             architecture: arm64
-          - os: macos-13
+          - os: macos-15-intel
             artifact: proovit-verify-macos-x64
             binary: proovit-verify-macos-x64.tar.gz
             architecture: x64
