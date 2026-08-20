@@ -152,10 +152,11 @@ def verify_blockchain_payload(root: dict[str, Any], manifest: dict[str, Any], re
     # fileCount therefore represents the aggregate state at anchor creation;
     # the authoritative post-anchor count is the number of verified file
     # transactions when those transactions are listed in the archive.
+    separate_file_count = len(blockchain.get("file_transactions") or [])
     if expected_file_count is None:
         report.add("fileCount blockchain", "INFO", "valeur attendue absente du manifeste")
-    elif int(expected_file_count) == 0 and file_events:
-        report.add("fileCount blockchain", "PASS", f"0 dans l’ancrage initial; {len(file_events)} fichier(s) vérifié(s) séparément")
+    elif int(decoded["fileCount"]) == 0 and separate_file_count == int(expected_file_count) and separate_file_count > 0:
+        report.add("fileCount blockchain", "PASS", f"0 dans l’ancrage initial; {separate_file_count} fichier(s) vérifié(s) séparément")
     else:
         equal = str(expected_file_count) == str(decoded["fileCount"])
         report.add("fileCount blockchain", "PASS" if equal else "FAIL", str(decoded["fileCount"]))
