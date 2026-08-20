@@ -46,7 +46,7 @@ Lorsque le manifest fournit un RPC public, l’outil peut retrouver le reçu blo
 | `ℹ` / `INFO` | L’information est absente, non disponible ou non applicable. |
 | `!` / `WARN` | Le contrôle fournit une observation à examiner, souvent liée au contexte ou à la compatibilité. |
 
-Une timeline absente peut être normale pour une preuve multimédia. Un `fileCount` global peut représenter l’état initial de `ProofStoredV3` lorsque les fichiers sont ajoutés par des transactions séparées ; ces transactions doivent alors être lues individuellement.
+Une timeline absente peut être normale pour une preuve multimédia. Lorsque les fichiers sont ajoutés par des transactions séparées, le rapport utilise ces transactions individuelles comme référence pour le décompte vérifié.
 
 ## Périmètre de l’appréciation
 
