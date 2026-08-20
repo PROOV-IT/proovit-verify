@@ -58,6 +58,7 @@ Pour un lecteur non technique, le résultat répond à quatre questions : l’ar
 - [Preuves multimédias](docs/MULTIMEDIA-EVIDENCE-V1.md)
 - [Vérification blockchain](docs/BLOCKCHAIN-VERIFICATION.md)
 - [Clés publiques](docs/PUBLIC-KEYS.md)
+- [Synthetic test vectors](docs/test-vectors/README.md)
 
 ## Limites actuelles
 
