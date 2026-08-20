@@ -2,9 +2,6 @@ name: Build ProovIT Verify
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '**'
 
 jobs:
   build:
