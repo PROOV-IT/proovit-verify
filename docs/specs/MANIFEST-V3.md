@@ -1,6 +1,6 @@
 # `proovit.manifest.v3`
 
-**Protocol:** certification manifest V3. **Encoding:** JSON, UTF-8.
+**Protocol:** signed manifest V3. **Encoding:** JSON, UTF-8.
 
 ## Purpose and field groups
 

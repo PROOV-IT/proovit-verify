@@ -35,7 +35,9 @@ La blockchain publique, un jeton RFC3161 ou un stockage immuable peuvent fournir
 
 ## Périmètre d’interprétation
 
-Le vérificateur établit des correspondances cryptographiques et des cohérences techniques. Il ne statue pas sur la vérité matérielle d’un événement, l’identité de son auteur, la recevabilité d’un document ou sa force probante.
+Le vérificateur établit des correspondances cryptographiques et des cohérences
+techniques. L'interprétation de l'événement documenté, de son auteur, de la
+recevabilité et de la force probante relève du contexte complet du dossier.
 
 ## Chaîne de confiance
 

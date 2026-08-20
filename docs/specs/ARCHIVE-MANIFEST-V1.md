@@ -12,7 +12,7 @@ proof.zip
 ├── verification.html
 ├── MANIFESTS/
 │   ├── archive_manifest_v1.json
-│   └── certification_manifest_v3.json
+│   └── proovit.manifest.v3
 ├── FILES/                 # original and derived evidence files
 ├── METADATA/              # portable metadata and blockchain references
 └── CERTIFICATES/          # optional PDF and timestamp artifacts
@@ -36,4 +36,4 @@ An original is the user-file representation whose digest is recorded by the proo
 
 ## Compatibility
 
-Additional fields are ignored by older readers. A reader MUST reject an absent required path or a digest/size mismatch. The certification manifest and its signature are verified independently.
+Additional fields are ignored by older readers. A reader MUST reject an absent required path or a digest/size mismatch. The signed manifest and its signature are verified independently.

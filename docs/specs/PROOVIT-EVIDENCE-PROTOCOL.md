@@ -35,7 +35,9 @@ File SHA-256 values are hexadecimal strings. Blockchain file `metaHash` is the o
 
 ## 7. Manifests
 
-The certification manifest is `proovit.manifest.v3`. The archive inventory is `archive_manifest_v1`. Their exact fields and compatibility rules are described in the linked sub-specifications.
+The signed manifest is `proovit.manifest.v3`. The archive inventory is
+`archive_manifest_v1`. Their exact fields and compatibility rules are described
+in the linked sub-specifications.
 
 ## 8. Signatures
 

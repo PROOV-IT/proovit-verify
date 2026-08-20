@@ -1,6 +1,6 @@
 # ProovIT Verify
 
-Current release: `v0.2.14`.
+Current release: `v0.2.18`.
 
 `proovit-verify` is an open-source verifier for ProovIT portable evidence archives. It performs the local checks without the ProovIT API and can query public blockchain data when the archive provides a public RPC reference.
 

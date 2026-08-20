@@ -26,4 +26,4 @@ An embedded signature file, RFC3161 token, geolocation value or device record is
 
 ## Portable and independent verification
 
-The archive inventory, certification manifest, signature and optional blockchain references are checked independently. See [Archive Manifest V1](ARCHIVE-MANIFEST-V1.md), [Manifest V3](MANIFEST-V3.md) and [Blockchain Verification](BLOCKCHAIN-VERIFICATION.md).
+The archive inventory, signed manifest, signature and optional blockchain references are checked independently. See [Archive Manifest V1](ARCHIVE-MANIFEST-V1.md), [Manifest V3](MANIFEST-V3.md) and [Blockchain Verification](BLOCKCHAIN-VERIFICATION.md).
