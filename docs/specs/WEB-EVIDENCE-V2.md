@@ -1,33 +1,147 @@
 # Web Evidence V2
 
-## 1. Scope
+## 1. Scope and terminology
 
-This document covers the Web timeline checks currently implemented by the independent verifier. It is not a complete browser-forensics specification.
+This document specifies the Web Evidence V2 fields and integrity checks that
+are represented in a ProovIT portable archive and consumed by the independent
+verifier. It is not a browser-forensics standard and does not independently
+replay a remote page.
 
-## 2. Provenance levels
+In this document, **recorded** means present in the archive, **observed** means
+attributed by the producer to a browser, runner or backend, **derived** means
+calculated during processing, and **verified** means that the independent
+verifier successfully performed the applicable comparison.
 
-Fields in a Web archive should be interpreted as `DECLARED_BY_USER`, `OBSERVED_BY_BROWSER`, `OBSERVED_BY_RUNNER`, `OBSERVED_BY_BACKEND`, `DERIVED_BY_PROOVIT`, or `EXTERNAL_ATTESTATION` when the producer records that provenance. A recorded provenance label describes origin; it does not automatically make the value tamper-proof.
+The protocol identifier is `web-evidence-v2`. A Web timeline is optional for
+the archive family; its absence is not an integrity failure for multimedia or
+other non-Web evidence.
 
-## 3. Session and navigation
+## 2. Acquisition session and navigation
 
-The archive may contain requested and final URLs, browser/runtime information, network context, resource references and screenshots. The verifier does not independently replay the source Web page or prove that a remote page was truthful at the time of capture.
+The producer may record a session identifier, acquisition identifier, requested
+URL, final URL, redirects, browser/runtime context, network observations and
+an initial session event. These values describe the acquisition context; their
+presence does not prove that a third party would observe the same remote page.
 
-A Web evidence archive may contain an event timeline: session opening, navigation, capture, state freeze and finalization. Each event contains a sequence number, a type, normalized content and the hash of the preceding event.
+The current verifier checks the fields and hashes supplied in the archive. It
+does not create a browser context, validate isolation, replay navigation, or
+re-resolve the remote URL. URL scheme validation, SSRF protection, redirect
+policy, network restrictions and navigation completion are acquisition-side
+controls and are not asserted by this offline verifier unless their resulting
+records are covered by a published integrity structure.
 
-The verifier checks sequence continuity, verifies that the first event has no predecessor, recomputes each canonical event hash and compares the final hash with the announced value.
+## 3. Observations and artifacts
 
-An archive without a Web timeline is not classified as corrupt by that fact alone: it may represent multimedia evidence or another evidence family. The result reports that the Web control is not applicable.
+A Web archive can contain HTML, a DOM snapshot, viewport or full-page
+screenshots, downloaded files, resources, HTTP metadata, response headers, DNS
+or TLS observations, timestamps and runtime information. The archive and its
+manifest establish which artifacts were actually supplied. File hashes and
+inventory entries can be recalculated locally; an observation such as a DNS
+answer, TLS property or HTTP header is not independently re-observed by the
+verifier.
 
-## 4. Exact timeline hash input
+Downloads are represented as file entries when included by the producer. Their
+identity, clear-file size, content hash and relationship to the session are
+checked only when the corresponding manifest and/or blockchain metadata is
+present. A CID identifies a stored representation and is not a clear-file
+SHA-256 value.
 
-The current verifier builds the canonical event payload with these keys: `event_id`, `session_id`, `acquisition_id`, `sequence`, `event_type`, `actor_type`, `user_id`, `server_received_at`, `runner_occurred_at`, `monotonic_time`, `normalized_payload` (from `payload` or `normalized_payload`), `result`, and `previous_event_hash`. It serializes that object using the verifier’s canonical JSON routine and hashes the UTF-8 bytes with SHA-256.
+### Normative field reference
 
-The first event must have sequence `1` and no previous hash. Each following event must reference the preceding computed hash. `last_event_hash`, when present, must equal the final computed hash.
+| Field or artifact | Source | Required | Format | Integrity mechanism | Verification method |
+|---|---|---:|---|---|---|
+| `requested_url` | acquisition context | conditional | URL string | manifest/signature when included | compare recorded value |
+| `final_url` | browser/runner record | conditional | URL string | manifest/timeline when included | compare recorded value |
+| redirects | runner record | optional | ordered URL records | artifact/manifest hashes | inspect and hash |
+| HTML / DOM | browser/runner | conditional | archive files | SHA-256 and inventory | recompute file hash |
+| viewport / full-page screenshot | browser/runner | optional | archive image files | SHA-256 and inventory | recompute file hash |
+| HTTP status / headers | runner record | optional | structured metadata | manifest/timeline when included | compare recorded value |
+| DNS / TLS | runner record | optional | structured metadata | manifest/timeline when included | compare recorded value |
+| resources | runner record | optional | ordered references/files | hashes when included | inspect references and hashes |
+| downloads | runner record | optional | file entries | SHA-256, manifest, optional blockchain | recompute and compare |
+| timeline | runner/backend | optional for archive family | ordered event array | chained SHA-256 | validate sequence and hashes |
+| runtime | runner record | optional | structured metadata | manifest when included | inspect recorded values |
+| acquisition timestamps | runner/backend | conditional | recorded timestamp strings | manifest/timeline/signature | inspect exact mechanism |
+| `evidence_root_hash` | derived | optional | lowercase SHA-256 hex | manifest/signature | recompute exact root |
 
-## 5. Evidence root
+“Conditional” means required only when the producer includes that Web feature;
+it does not imply that the verifier can reconstruct an omitted observation.
 
-For manifests that contain `integrity.evidence_root_hash`, the current verifier hashes the canonical object containing `protocol_version`, `canonical_manifest_sha256`, `timeline_last_hash` and `artifact_hashes`. This check is only available when those source fields are present. It is not inferred for a non-Web proof.
+## 4. Timeline integrity
 
-## 6. Known limits
+Each event is an object containing `event_id`, `session_id`, `acquisition_id`,
+`sequence`, `event_type`, `actor_type`, `user_id`, `server_received_at`,
+`runner_occurred_at`, `monotonic_time`, `normalized_payload` (read from
+`payload` or `normalized_payload`), `result`, and
+`previous_event_hash`. Object keys are canonicalized using the Manifest V3
+JSON rules: UTF-8, sorted object keys, preserved array order, no insignificant
+whitespace, and JSON escaping as specified by the canonicalization routine.
 
-The current verifier does not independently validate all browser isolation, DNS, TLS, redirect, HTML, DOM or screenshot acquisition claims. Those claims remain dependent on the producer’s recorded observations and the platform implementation.
+The event hash is SHA-256 of the UTF-8 canonical JSON bytes of that object,
+rendered as lowercase hexadecimal. The first event has sequence `1` and no
+predecessor. Every later event must reference the hash of the immediately
+preceding computed event. If `last_event_hash` is present, it must equal the
+final computed hash. The verifier rejects gaps, reordering, broken predecessor
+hashes or a mismatching final value.
+
+## 5. Freeze and finalization
+
+The archive may record events such as capture, freeze and finalization. In the
+portable evidence model, these are recorded state transitions; the verifier
+checks their ordering and hashes when a timeline is present. This verifier does
+not claim that freeze stopped network access, that the browser became
+forensically isolated, or that no producer-side process ran afterwards.
+
+Finalization relates the runner output to backend processing: the backend
+persists the manifest and artifact references, builds the portable archive,
+and may publish blockchain references. The verifier checks the resulting
+archive, manifest, signature, timeline and public receipts; it does not inspect
+the private runner-to-backend transport.
+
+## 6. Manifest and evidence root
+
+The Web data is carried by the portable archive manifest and its file entries.
+Manifest V3 canonicalization, hashing and Ed25519 verification are specified in
+[`MANIFEST-V3.md`](MANIFEST-V3.md). The Web protocol version and artifact
+references are inputs to that manifest; they are not a second unsigned source
+of truth.
+
+When `integrity.evidence_root_hash` is present, the verifier canonicalizes this
+object, preserving the listed artifact order:
+
+```json
+{
+  "protocol_version": "...",
+  "canonical_manifest_sha256": "...",
+  "timeline_last_hash": "...",
+  "artifact_hashes": []
+}
+```
+
+It hashes the UTF-8 canonical JSON bytes with SHA-256 and compares the
+lowercase hexadecimal result with `evidence_root_hash`. Missing source fields
+are reported as unavailable; no root is fabricated.
+
+## 7. Verification procedure
+
+Offline checks include archive readability, inventory, artifact SHA-256 values,
+manifest canonicalization, manifest signature, timeline continuity and the
+evidence root when their inputs are present. Network-dependent checks include
+retrieving a referenced blockchain receipt through the supplied RPC and
+comparing decoded public commitments. The verifier does not contact the Web
+origin, execute archived HTML, or treat an unavailable RPC as a successful
+comparison.
+
+## 8. Security considerations and protocol scope
+
+Archives, JSON, HTML, screenshots and RPC responses are untrusted input. A
+safe implementation must reject malformed JSON and invalid signatures, avoid
+path traversal and excessive decompression, avoid executing archived HTML as
+trusted code, and apply suitable request and resource limits. Acquisition
+systems must separately handle hostile pages, redirects, SSRF, oversized
+resources and secret-bearing fields.
+
+This specification protects reproducible relationships among recorded Web
+artifacts, their manifest, timeline and optional public anchors. It does not
+establish the truth of a page, authorship, browser isolation, a qualified
+timestamp, or legal admissibility.

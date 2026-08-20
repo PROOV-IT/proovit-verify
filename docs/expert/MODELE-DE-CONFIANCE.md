@@ -4,6 +4,11 @@
 
 ## Objet du modèle de confiance
 
+Le modèle sépare l'acquisition, la conservation, les calculs dérivés, les
+attestations externes et la vérification indépendante. Il indique ce qu'un
+tiers peut recalculer à partir de l'archive et des ressources publiques, et ce
+qui reste une information enregistrée dans son contexte d'origine.
+
 ## Contrôles reproductibles indépendamment
 
 À partir de l’archive et des ressources publiques, un tiers peut recalculer les empreintes des fichiers, la canonicalisation du manifeste, la signature Ed25519, la chaîne de timeline Web et les valeurs décodées d’un reçu blockchain lorsque le réseau est accessible.
@@ -55,10 +60,6 @@ flowchart LR
 ## Exigences de traitement sécurisé
 
 Les implémentations doivent traiter les archives, JSON, HTML et réponses RPC comme des entrées non fiables : rejeter le JSON malformé, l’UTF-8 invalide, les signatures invalides, les chemins traversants et les décompressions excessives ; ne pas exécuter le HTML de l’archive comme du code de confiance.
-
-## Périmètre d’interprétation
-
-Le modèle décrit l’origine et les contrôles des données. Il ne constitue pas une qualification juridique et ne remplace pas l’examen du contexte, de la conservation et des autres éléments du dossier.
 
 ## Pour aller plus loin
 
