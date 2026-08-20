@@ -11,6 +11,10 @@ capture ou import → réception → empreinte → manifest → ancrage
       → archive portable → vérification indépendante
 ```
 
+Cette chaîne décrit les relations techniques contrôlables. Elle ne signifie
+pas que chaque étape constitue, à elle seule, une preuve indépendante de la
+réalité du contenu ou de l'identité de son auteur.
+
 ## Éléments constituant une preuve
 
 Selon le type de dépôt, l’archive peut contenir le fichier d’origine, des versions de preuve ou artefacts dérivés, un certificat PDF, un inventaire ZIP, un manifest signé, des informations de contexte et des références blockchain.
@@ -37,7 +41,26 @@ L’archive peut associer une date serveur, un jeton RFC3161 ou une autre réfé
 
 ## Ancrage blockchain
 
-Le CID peut désigner une représentation chiffrée stockée sur IPFS. Il ne doit donc pas être confondu avec l’empreinte ou la taille du fichier utilisateur en clair.
+L'ancrage blockchain inscrit publiquement des identifiants et des empreintes
+associés à la preuve : selon le type de dépôt, l'identifiant de preuve, le
+`dataHash`, le `filesRoot`, le nombre de fichiers et les références des
+transactions `FileAddedV3`. La blockchain ne contient pas nécessairement les
+fichiers originaux et ne remplace pas l'archive portable.
+
+Le vérificateur récupère le reçu à partir de la référence de transaction et du
+RPC public, décode les événements du contrat attendu, puis compare les valeurs
+on-chain aux valeurs de l'archive et aux métadonnées des fichiers. Lorsque les
+fichiers ont été ancrés dans des transactions séparées, leur nombre vérifié est
+calculé à partir de ces transactions séparées ; un compteur nul dans
+l'ancrage initial n'est donc pas, à lui seul, une contradiction.
+
+## Stockage et distribution
+
+Un CID peut désigner une représentation chiffrée stockée sur IPFS. Il ne doit
+pas être confondu avec l'empreinte SHA-256, la taille du fichier utilisateur en
+clair ou une preuve que le contenu est publiquement lisible. Le code d'accès
+sert à ouvrir l'archive ; la vérification indépendante porte ensuite sur les
+octets et les métadonnées effectivement reçus.
 
 ## Données de contexte
 
